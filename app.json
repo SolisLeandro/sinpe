@@ -21,10 +21,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.jpg",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.smleandro.Sinpe"
     },
     "web": {
       "favicon": "./assets/logo.jpg"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8beb880c-5f25-427c-95bb-d7bc0b941ac8"
+      }
     }
   }
 }
