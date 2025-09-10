@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Alert } from 'react-native';
+import { Alert, Platform, NativeModules } from 'react-native';
 import * as SMS from 'expo-sms';
+const { SMSSender } = NativeModules;
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 
 export function getUniqueNumbers(contacts) {
     const numbersSet = new Set()
@@ -46,16 +48,52 @@ export async function addHistorySMS(smsObject) {
     await AsyncStorage.setItem('SMS_HISTORY', JSON.stringify(history))
 };
 
+const requestSMSPermission = async () => {
+    if (Platform.OS === 'android') {
+        const result = await request(PERMISSIONS.ANDROID.SEND_SMS);
+        return result === RESULTS.GRANTED;
+    }
+    return true; // iOS doesn't require runtime permission for SMS
+};
+
+export async function sendSMSAndWaitForResponse(messageText, recipientNumber) {
+    const hasPermission = await requestSMSPermission();
+    if (!hasPermission) {
+        throw new Error('This app needs SMS permission to send messages.');
+    }
+
+    if (Platform.OS === 'android') {
+        const isAvailable = await SMS.isAvailableAsync();
+        if (isAvailable) {
+            try {
+                console.log('Attempting to require SMSSender module...');
+                if (!SMSSender) {
+                    console.error('SMSSender module is not available after requiring');
+                    throw new Error('SMSSender module is not available');
+                }
+                console.log('SMSSender module found, attempting to send SMS...');
+                return await SMSSender.sendSMSAndWaitForResponse(recipientNumber, messageText);
+            } catch (error) {
+                console.error('Error in sendSMSAndWaitForResponse:', error);
+                throw error;
+            }
+        } else {
+            throw new Error('SMS is not available on this device');
+        }
+    } else {
+        return sendSMS(messageText, recipientNumber)
+    }
+}
+
 export async function sendSMS(text, recipient) {
-  const isAvailable = await SMS.isAvailableAsync();
-  if (isAvailable) {
-    const { result } = await SMS.sendSMSAsync(
-      [recipient],
-      text
-    );
-    return result === 'sent';
-  } else {
-    console.log('SMS is not available');
-    return false;
-  }
+    const isAvailable = await SMS.isAvailableAsync();
+    if (isAvailable) {
+        const { result } = await SMS.sendSMSAsync(
+            [recipient],
+            text
+        );
+        return result === 'sent';
+    } else {
+        throw new Error('SMS is not available on this device');
+    }
 }

@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import Home from './src/screens/Home'
 import Authentication from './src/screens/Authentication'
+import ProviderConfig from './src/screens/ProviderConfig'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 const Stack = createNativeStackNavigator()
@@ -15,6 +16,7 @@ export default function App() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Authentication" component={Authentication} />
           <Stack.Screen name="Home" component={Home} />
+          <Stack.Screen name="ProviderConfig" component={ProviderConfig} />
         </Stack.Navigator>
         <StatusBar style="auto" />
       </NavigationContainer>

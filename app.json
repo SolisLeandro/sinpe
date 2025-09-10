@@ -4,7 +4,7 @@
     "slug": "Sinpe",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.jpg",
+    "icon": "./assets/logo2.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
@@ -15,14 +15,22 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSAppleMusicUsageDescription": "This app requires access to send SMS."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.jpg",
+        "foregroundImage": "./assets/logo2.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.smleandro.Sinpe"
+      "package": "com.smleandro.Sinpe",
+      "permissions": [
+        "SEND_SMS",
+        "RECEIVE_SMS",
+        "READ_SMS"
+      ]
     },
     "web": {
       "favicon": "./assets/logo.jpg"
@@ -31,6 +39,22 @@
       "eas": {
         "projectId": "8beb880c-5f25-427c-95bb-d7bc0b941ac8"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
+          }
+        }
+      ],
+      "./src/plugins/withSMSSender",
+      [
+        "expo-dev-client"
+      ]
+    ]
   }
 }
