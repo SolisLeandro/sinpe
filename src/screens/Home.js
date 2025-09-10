@@ -50,8 +50,19 @@ export default function Home({ navigation }) {
             console.log('Attempting to send SMS...');
             const response = await sendSMSAndWaitForResponse(SMSText, selectedProvider);
             console.log('SMS Response:', response);
-            Alert.alert('Éxito', `Mensaje enviado y respuesta recibida: ${response}`);
-            clearVariables()
+            
+            // Verificar si la respuesta es exitosa
+            const isSuccess = response && 
+                             response.toLowerCase().includes('ha pasado') && 
+                             response.toLowerCase().includes('comprobante');
+            
+            if (isSuccess) {
+                Alert.alert('Éxito', `Transferencia exitosa: ${response}`);
+                clearVariables();
+            } else {
+                Alert.alert('Error', `Transferencia falló: ${response}`);
+                setButtonState("AVAILABLE");
+            }
         } catch (error) {
             console.error('Error in handleSendSMS:', error);
             Alert.alert('Error', error.message || 'An unknown error occurred');
