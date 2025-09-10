@@ -43,7 +43,8 @@ export default function Home({ navigation }) {
     };
 
     const handleSendSMS = async () => {
-        const SMSText = 'PASE ' + amount.replaceAll("₡", "").replaceAll(" ", "") + " " + selectedItem.number + " " + motive;
+        const cleanAmount = amount.replace(/₡/g, "").replace(/\s/g, "");
+        const SMSText = 'PASE ' + cleanAmount + " " + selectedItem.number + " " + motive;
         setButtonState("WAIT");
         try {
             console.log('Attempting to send SMS...');
@@ -98,7 +99,7 @@ export default function Home({ navigation }) {
             // Load all providers from new storage format
             const savedProviders = await AsyncStorage.getItem('allProviders');
             let allProviders = [...defaultProviders];
-            
+
             if (savedProviders !== null) {
                 allProviders = JSON.parse(savedProviders);
             } else {
@@ -155,7 +156,7 @@ export default function Home({ navigation }) {
     );
 
     useEffect(() => {
-        if (selectedItem !== null && amount !== "" && motive !== "") {
+        if (selectedItem !== null && amount !== "" && motive !== "" && motive.length >= 5) {
             setButtonState("AVAILABLE");
         } else {
             setButtonState("DISABLED");
