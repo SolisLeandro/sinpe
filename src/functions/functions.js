@@ -57,10 +57,6 @@ const requestSMSPermission = async () => {
 };
 
 export async function sendSMSAndWaitForResponse(messageText, recipientNumber) {
-    const hasPermission = await requestSMSPermission();
-    if (!hasPermission) {
-        throw new Error('This app needs SMS permission to send messages.');
-    }
 
     if (Platform.OS === 'android') {
         const isAvailable = await SMS.isAvailableAsync();

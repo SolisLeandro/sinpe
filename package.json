@@ -19,6 +19,7 @@
     "expo-dev-client": "~5.2.4",
     "expo-device": "~7.1.4",
     "expo-local-authentication": "~16.0.5",
+    "expo-media-library": "^17.1.7",
     "expo-modules-core": "1.11.11",
     "expo-sms": "~11.7.1",
     "expo-status-bar": "~2.2.3",
@@ -28,7 +29,8 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-sms": "^1.11.0",
-    "react-native-vector-icons": "^10.0.3"
+    "react-native-vector-icons": "^10.0.3",
+    "react-native-view-shot": "^4.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

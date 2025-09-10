@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TextInput, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TextInput, ActivityIndicator, TouchableOpacity, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Contacts from 'expo-contacts';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import * as MediaLibrary from 'expo-media-library';
 
 import { getUniqueNumbers, getLocalStorageContacts, showAlert, sendSMS, sendSMSAndWaitForResponse } from '../functions/functions';
 import SearchableInput from '../components/SearchableInput';
 import MoneyInput from '../components/MoneyInput';
 import ProviderMenu from '../components/ProviderMenu';
+import ReceiptModal from '../components/ReceiptModal';
 
 import logo from '../../assets/SinpeDiablazoLogo.png';
 
@@ -24,6 +27,8 @@ export default function Home({ navigation }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [selectedProvider, setSelectedProvider] = useState("6223-2450");
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+    const [receiptData, setReceiptData] = useState(null);
 
     const handleSelectItem = (item) => {
         setSelectedItem(item);
@@ -42,6 +47,71 @@ export default function Home({ navigation }) {
         navigation.navigate('ProviderConfig');
     };
 
+    const extractReceiptData = (response) => {
+        try {
+            // Extraer datos de la respuesta usando regex
+            const amountMatch = response.match(/(\d{1,3}(?:[,\.]\d{3})*(?:[,\.]\d{2})?)\s*colones?/i);
+            const phoneMatch = response.match(/al\s+(\d{8})/i);
+            const nameMatch = response.match(/de\s+([^,]+)/i);
+            const receiptMatch = response.match(/comprobante\s+(\d+)/i);
+            
+            return {
+                amount: amountMatch ? amountMatch[1] : null,
+                phone: phoneMatch ? phoneMatch[1] : null,
+                name: nameMatch ? nameMatch[1].trim() : null,
+                receipt: receiptMatch ? receiptMatch[1] : null
+            };
+        } catch (error) {
+            console.error('Error extracting receipt data:', error);
+            return null;
+        }
+    };
+
+    const requestPermissions = async () => {
+        try {
+            // Solicitar permisos de contactos
+            const contactsPermission = await Contacts.requestPermissionsAsync();
+            
+            // Solicitar permisos de SMS (solo en Android)
+            let smsPermission = { status: 'granted' };
+            if (Platform.OS === 'android') {
+                smsPermission = await request(PERMISSIONS.ANDROID.SEND_SMS);
+            }
+            
+            // Solicitar permisos de media library
+            const mediaPermission = await MediaLibrary.requestPermissionsAsync();
+            
+            // Verificar si todos los permisos fueron concedidos
+            const allPermissionsGranted = 
+                contactsPermission.status === 'granted' &&
+                (Platform.OS === 'ios' || smsPermission === RESULTS.GRANTED) &&
+                mediaPermission.status === 'granted';
+            
+            if (!allPermissionsGranted) {
+                Alert.alert(
+                    'Permisos requeridos',
+                    'Esta aplicación necesita permisos para acceder a contactos, enviar SMS y guardar imágenes para funcionar correctamente.',
+                    [{ text: 'OK' }]
+                );
+            }
+            
+            return allPermissionsGranted;
+        } catch (error) {
+            console.error('Error requesting permissions:', error);
+            return false;
+        }
+    };
+
+    const generateReceiptImage = async (extractedReceiptData, originalAmount, destinationPhone, motive) => {
+        setReceiptData({
+            ...extractedReceiptData,
+            amount: originalAmount,
+            destinationPhone,
+            motive
+        });
+        setReceiptModalVisible(true);
+    };
+
     const handleSendSMS = async () => {
         const cleanAmount = amount.replace(/₡/g, "").replace(/\s/g, "");
         const SMSText = 'PASE ' + cleanAmount + " " + selectedItem.number + " " + motive;
@@ -57,8 +127,19 @@ export default function Home({ navigation }) {
                              response.toLowerCase().includes('comprobante');
             
             if (isSuccess) {
-                Alert.alert('Éxito', `Transferencia exitosa: ${response}`);
-                clearVariables();
+                const extractedReceiptData = extractReceiptData(response);
+                const hasReceiptData = extractedReceiptData && extractedReceiptData.receipt && extractedReceiptData.name;
+                
+                if (hasReceiptData) {
+                    // Ir directo al modal del comprobante
+                    clearVariables();
+                    generateReceiptImage(extractedReceiptData, amount, selectedItem.number, motive);
+                } else {
+                    // Si no hay datos del comprobante, mostrar alerta simple
+                    Alert.alert('Éxito', `Transferencia exitosa: ${response}`, [
+                        { text: 'Cerrar', onPress: () => clearVariables() }
+                    ]);
+                }
             } else {
                 Alert.alert('Error', `Transferencia falló: ${response}`);
                 setButtonState("AVAILABLE");
@@ -73,8 +154,8 @@ export default function Home({ navigation }) {
     const getContacts = async () => {
         var localStorageContacts = await getLocalStorageContacts();
         setLocalContacts(localStorageContacts);
-        const { status } = await Contacts.requestPermissionsAsync();
-        if (status === 'granted') {
+        
+        try {
             const { data } = await Contacts.getContactsAsync({
                 fields: [Contacts.Fields.Emails, Contacts.Fields.PhoneNumbers],
             });
@@ -95,6 +176,8 @@ export default function Home({ navigation }) {
             if (mappedData.length > 0) {
                 setContacts(mappedData);
             }
+        } catch (error) {
+            console.error('Error loading contacts:', error);
         }
     };
 
@@ -153,8 +236,13 @@ export default function Home({ navigation }) {
     };
 
     useEffect(() => {
-        getContacts();
-        loadSavedProvider();
+        const initializeApp = async () => {
+            await requestPermissions();
+            await getContacts();
+            await loadSavedProvider();
+        };
+        
+        initializeApp();
     }, []);
 
     // Refresh provider when returning from config screen
@@ -230,6 +318,17 @@ export default function Home({ navigation }) {
                 onConfigureProviders={handleConfigureProviders}
                 refreshTrigger={refreshTrigger}
             />
+
+            {receiptData && (
+                <ReceiptModal
+                    visible={receiptModalVisible}
+                    onClose={() => setReceiptModalVisible(false)}
+                    receiptData={receiptData}
+                    amount={receiptData.amount}
+                    destinationPhone={receiptData.destinationPhone}
+                    motive={receiptData.motive}
+                />
+            )}
 
         </SafeAreaView>
     );
